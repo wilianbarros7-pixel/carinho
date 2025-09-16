@@ -1,170 +1,604 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Carinho?</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #ffe6f0;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-    }
-
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      position: relative;
-    }
-
-    h1 {
-      color: #e60073;
-      font-size: 2.5rem;
-      margin-bottom: 40px;
-    }
-
-    .botoes {
-      display: flex;
-      gap: 20px;
-      position: relative;
-    }
-
-    button {
-      padding: 15px 30px;
-      font-size: 1.2rem;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    #sim {
-      background-color: #ff4da6;
-      color: white;
-    }
-
-    #nao {
-      background-color: #ccc;
-      color: black;
-      position: absolute;
-      left: 0;
-      top: 0;
-    }
-
-    .overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      flex-direction: column;
-    }
-
-    .mensagem {
-      color: white;
-      font-size: 2rem;
-      margin-bottom: 20px;
-    }
-
-    .coraçao {
-      position: absolute;
-      color: red;
-      font-size: 2rem;
-      animation: subir 2s linear forwards;
-    }
-
-    @keyframes subir {
-      0% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(-200px);
-      }
-    }
-  </style>
+    <meta charset="utf-8"/>
+    <title>Kanban Veículos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: url('https://img.freepik.com/vetores-gratis/fundo-preto-com-linhas-onduladas_52683-76524.jpg');
+            background-size: cover;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        #search-container {
+            margin: 20px;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #search-container input, #search-container button {
+            padding: 10px;
+            font-size: 16px;
+        }
+        #searchInput {
+            width: 300px;
+            margin-right: 10px;
+        }
+        #reportButton {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        #kanban {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+        .column {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            padding: 10px;
+            width: 18%;
+            margin: 10px;
+            min-height: 200px;
+        }
+        .column h2 {
+            text-align: center;
+        }
+        .card {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .card.dragging {
+            opacity: 0.5;
+        }
+        .popup {
+            position: fixed;
+            background-color: white;
+            border: 2px solid #333;
+            border-radius: 10px;
+            padding: 15px;
+            width: 350px;
+            z-index: 1000;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            animation: fadeIn 0.3s ease-in-out;
+            resize: both;
+            overflow: auto;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            background-color: #444;
+            color: white;
+            padding: 8px 15px;
+            margin: -15px -15px 15px -15px;
+            border-radius: 8px 8px 0 0;
+        }
+        .popup-header h3 {
+            margin: 0;
+        }
+        .popup-controls span {
+            margin-left: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .popup-content p {
+            margin: 5px 0;
+        }
+        .popup textarea {
+            width: calc(100% - 20px);
+            min-height: 100px;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .minimized-bar {
+            background-color: #eee;
+            border: 1px solid #333;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            z-index: 1001;
+            margin-right: 5px;
+            display: inline-block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        #minimizedContainer {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            z-index: 1001;
+        }
+        .report-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+        }
+        .report-options button {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9) translate(-50%, -50%); }
+            to { opacity: 1; transform: scale(1) translate(-50%, -50%); }
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Você vai me dar carinho?</h1>
-    <div class="botoes">
-      <button id="sim">Sim</button>
-      <button id="nao">Não</button>
-    </div>
-  </div>
+<header>Kanban Veículos</header>
+<div id="search-container">
+    <input id="searchInput" onkeyup="searchCards()" placeholder="Buscar por placa, empresa ou dias..." type="text"/>
+    <input accept=".csv" id="csvFile" onchange="loadCSV(event)" type="file"/>
+    <button id="reportButton">Gerar Relatório</button>
+</div>
+<div id="kanban">
+    <div class="column" id="dias90" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>90 Dias</h2></div>
+    <div class="column" id="dias50" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>50 Dias</h2></div>
+    <div class="column" id="aguardando" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>Aguardando</h2></div>
+    <div class="column" id="semRetorno" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>Sem Retorno</h2></div>
+    <div class="column" id="tenhoResposta" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>Tenho Resposta</h2></div>
+</div>
+<footer></footer>
+<div id="minimizedContainer"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+    let allCardsData = [];
+    let savedState = {};
+    const savedStateKey = 'kanbanState';
 
-  <div class="overlay" id="overlay">
-    <div class="mensagem">Então me dá carinho agora</div>
-  </div>
+    document.getElementById('reportButton').addEventListener('click', showReportPopup);
 
-  <script>
-    const naoBtn = document.getElementById('nao');
-    const simBtn = document.getElementById('sim');
-    const overlay = document.getElementById('overlay');
+    function showReportPopup() {
+        const existingPopup = document.getElementById('report-popup');
+        if (existingPopup) {
+            existingPopup.remove();
+        }
 
-    // Inicializa o botão "Não" no lado direito
-    function inicializarBotaoNao() {
-      naoBtn.style.left = "100px";
-      naoBtn.style.top = "0px";
+        const popup = document.createElement('div');
+        popup.className = 'popup';
+        popup.id = 'report-popup';
+
+        const header = document.createElement('div');
+        header.className = 'popup-header';
+        header.innerHTML = `<h3>Opções de Relatório</h3>
+                            <div class="popup-controls">
+                                <span onclick="document.getElementById('report-popup').remove()">X</span>
+                            </div>`;
+
+        const content = document.createElement('div');
+        content.className = 'report-options';
+        content.innerHTML = `<button onclick="generatePDF()">Gerar PDF</button>
+                             <button onclick="generateCSV()">Gerar Planilha (CSV)</button>
+                             <button onclick="printReport()">Imprimir</button>`;
+
+        popup.appendChild(header);
+        popup.appendChild(content);
+
+        document.body.appendChild(popup);
+        makeDraggable(popup);
+    }
+    
+    function generatePDFContent(forPrint = false) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        let yOffsetLeft = 30;
+        let yOffsetRight = 30;
+        const columnXLeft = 10;
+        const columnXRight = 105;
+        let pageNumber = 1;
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        const addMainHeader = () => {
+            doc.setFillColor(68, 68, 68);
+            doc.rect(0, 0, pageWidth, 20, 'F');
+            doc.setFontSize(16);
+            doc.setTextColor(255, 255, 255);
+            doc.text("Relatório Kanban de Veículos", 10, 13);
+            doc.setFontSize(10);
+            doc.text("Gerado em: " + new Date().toLocaleString(), 10, 18);
+            doc.setTextColor(0, 0, 0);
+        };
+
+        const addCategoryHeader = (statusName) => {
+            doc.setFillColor(68, 68, 68);
+            doc.rect(0, 0, pageWidth, 20, 'F');
+            doc.setFontSize(16);
+            doc.setTextColor(255, 255, 255);
+            doc.text(`${statusName}`, 10, 13);
+            doc.setFontSize(10);
+            doc.text(`Página ${pageNumber}`, pageWidth - 25, 13);
+            doc.setTextColor(0, 0, 0);
+        };
+        
+        const statusMap = {
+            'dias90': '90 Dias',
+            'dias50': '50 Dias',
+            'aguardando': 'Aguardando',
+            'semRetorno': 'Sem Retorno',
+            'tenhoResposta': 'Tenho Resposta'
+        };
+
+        let firstCategory = true;
+        for (const [columnId, statusName] of Object.entries(statusMap)) {
+            const cardsInColumn = savedState[columnId] || [];
+            if (cardsInColumn.length === 0) continue;
+
+            if (firstCategory) {
+                addMainHeader();
+                firstCategory = false;
+            } else {
+                doc.addPage();
+                pageNumber++;
+                yOffsetLeft = yOffsetRight = 30;
+                addCategoryHeader(statusName);
+            }
+
+            let yTitle = Math.max(yOffsetLeft, yOffsetRight);
+
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'bold');
+            doc.text(`${statusName} (${cardsInColumn.length} veículos)`, columnXLeft, yTitle);
+            yOffsetLeft = yOffsetRight = yTitle + 8;
+            doc.setFont(undefined, 'normal');
+
+            const sortedCards = cardsInColumn.sort((a, b) => {
+                const originalA = allCardsData.find(item => item.PLACA === a.placa);
+                const originalB = allCardsData.find(item => item.PLACA === b.placa);
+                return (originalB ? parseInt(originalB['DIAS EM REPARO']) : 0) - (originalA ? parseInt(originalA['DIAS EM REPARO']) : 0);
+            });
+
+            sortedCards.forEach(card => {
+                const originalCardData = allCardsData.find(item => item.PLACA === card.placa);
+                if (originalCardData) {
+                    const obs = card.obs.trim();
+                    let text = `Placa: ${card.placa} | Dias: ${originalCardData['DIAS EM REPARO']}`;
+                    if (obs) {
+                        text += ` | Anotações: ${obs}`;
+                    }
+                    
+                    const splitText = doc.splitTextToSize(text, 90);
+                    const textHeight = doc.getLineHeight() * splitText.length;
+
+                    let currentX, currentY, yOffsetToUpdate;
+                    
+                    if (yOffsetLeft <= yOffsetRight) {
+                        currentX = columnXLeft;
+                        currentY = yOffsetLeft;
+                        yOffsetToUpdate = 'yOffsetLeft';
+                    } else {
+                        currentX = columnXRight;
+                        currentY = yOffsetRight;
+                        yOffsetToUpdate = 'yOffsetRight';
+                    }
+                    
+                    if (currentY + textHeight > pageHeight - 20) {
+                        doc.addPage();
+                        pageNumber++;
+                        addCategoryHeader(statusName);
+                        yOffsetLeft = yOffsetRight = 30;
+                        currentX = columnXLeft;
+                        currentY = yOffsetLeft;
+                        yOffsetToUpdate = 'yOffsetLeft';
+                    }
+
+                    doc.setFontSize(10);
+                    doc.text(splitText, currentX, currentY);
+
+                    if (yOffsetToUpdate === 'yOffsetLeft') {
+                        yOffsetLeft += textHeight + 5;
+                    } else {
+                        yOffsetRight += textHeight + 5;
+                    }
+                }
+            });
+        }
+        return doc;
     }
 
-    inicializarBotaoNao();
-
-    document.addEventListener('mousemove', (e) => {
-      const mouseX = e.clientX;
-      const mouseY = e.clientY;
-      const rect = naoBtn.getBoundingClientRect();
-      const btnX = rect.left + rect.width / 2;
-      const btnY = rect.top + rect.height / 2;
-
-      const distancia = Math.hypot(mouseX - btnX, mouseY - btnY);
-
-      if (distancia < 100) {
-        let newX = btnX + (Math.random() - 0.5) * 300;
-        let newY = btnY + (Math.random() - 0.5) * 300;
-
-        // Garante que o botão fique dentro da tela
-        const maxX = window.innerWidth - rect.width;
-        const maxY = window.innerHeight - rect.height;
-
-        newX = Math.max(0, Math.min(maxX, newX));
-        newY = Math.max(0, Math.min(maxY, newY));
-
-        naoBtn.style.left = newX + 'px';
-        naoBtn.style.top = newY + 'px';
-      }
-    });
-
-    simBtn.addEventListener('click', () => {
-      overlay.style.display = 'flex';
-      gerarCoracoes();
-    });
-
-    function gerarCoracoes() {
-      for (let i = 0; i < 20; i++) {
-        const cora = document.createElement('div');
-        cora.classList.add('coraçao');
-        cora.innerText = '❤';
-        cora.style.left = Math.random() * window.innerWidth + 'px';
-        cora.style.top = window.innerHeight + 'px';
-        overlay.appendChild(cora);
-
-        setTimeout(() => {
-          cora.remove();
-        }, 2000);
-      }
+    function generatePDF() {
+        const doc = generatePDFContent();
+        doc.save("relatorio_kanban.pdf");
+        document.getElementById('report-popup').remove();
     }
-  </script>
+
+    function printReport() {
+        const doc = generatePDFContent();
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const printWindow = window.open(url);
+        
+        printWindow.onload = () => {
+            printWindow.print();
+        };
+
+        document.getElementById('report-popup').remove();
+    }
+    
+    function generateCSV() {
+        const statusMap = {
+            'dias90': '90 Dias',
+            'dias50': '50 Dias',
+            'aguardando': 'Aguardando',
+            'semRetorno': 'Sem Retorno',
+            'tenhoResposta': 'Tenho Resposta'
+        };
+
+        let csvContent = "Status;Placa;Dias em Reparo;Empresa Responsável;Anotações\n";
+
+        for (const [columnId, statusName] of Object.entries(statusMap)) {
+            const cardsInColumn = savedState[columnId] || [];
+            if (cardsInColumn.length === 0) continue;
+
+            cardsInColumn.forEach(card => {
+                const originalCardData = allCardsData.find(item => item.PLACA === card.placa);
+                if (originalCardData) {
+                    const placa = card.placa;
+                    const dias = originalCardData['DIAS EM REPARO'] || '';
+                    const empresa = originalCardData['EMPRESA RESP'] || '';
+                    const obs = card.obs || '';
+
+                    // Trata vírgulas e aspas duplas nas anotações
+                    const sanitizedObs = `"${obs.replace(/"/g, '""')}"`;
+                    
+                    csvContent += `${statusName};${placa};${dias};${empresa};${sanitizedObs}\n`;
+                }
+            });
+        }
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "relatorio_kanban.csv");
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        document.getElementById('report-popup').remove();
+    }
+
+    function saveState() {
+        const state = {};
+        document.querySelectorAll('.column').forEach(column => {
+            const columnId = column.id;
+            state[columnId] = Array.from(column.querySelectorAll('.card')).map(card => {
+                const placa = card.dataset.placa;
+                const obsElement = document.getElementById(`obs-${placa}`);
+                const obs = obsElement ? obsElement.value : (savedState[columnId]?.find(c => c.placa === placa)?.obs || '');
+                return { placa, obs };
+            });
+        });
+        localStorage.setItem(savedStateKey, JSON.stringify(state));
+    }
+    function loadState() {
+        const savedStateString = localStorage.getItem(savedStateKey);
+        savedState = savedStateString ? JSON.parse(savedStateString) : {};
+    }
+    function loadCSV(event) {
+        const file = event.target.files[0];
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                allCardsData = results.data.filter(item => parseInt(item['DIAS EM REPARO']) >= 50);
+                loadState();
+                renderCards(allCardsData);
+            }
+        });
+    }
+    function renderCards(data) {
+        const columns = ['dias90', 'dias50', 'aguardando', 'semRetorno', 'tenhoResposta'];
+        columns.forEach(id => {
+            document.getElementById(id).innerHTML = `<h2>${document.getElementById(id).querySelector('h2').textContent}</h2>`;
+        });
+        const renderedPlacas = new Set();
+        if (Object.keys(savedState).length > 0) {
+            columns.forEach(columnId => {
+                if (savedState[columnId]) {
+                    savedState[columnId].forEach(savedCard => {
+                        const originalCardData = data.find(item => item.PLACA === savedCard.placa);
+                        if (originalCardData && !renderedPlacas.has(savedCard.placa)) {
+                            createCard(originalCardData, columnId);
+                            renderedPlacas.add(savedCard.placa);
+                        }
+                    });
+                }
+            });
+        }
+        data.forEach(item => {
+            if (!renderedPlacas.has(item.PLACA)) {
+                const dias = parseInt(item['DIAS EM REPARO']);
+                let targetColumnId = 'aguardando';
+                if (dias >= 90) {
+                    targetColumnId = 'dias90';
+                } else if (dias >= 50) {
+                    targetColumnId = 'dias50';
+                } else {
+                    return;
+                }
+                createCard(item, targetColumnId);
+            }
+        });
+        sortCardsInColumns();
+    }
+    function createCard(item, columnId) {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.setAttribute('draggable', 'true');
+        card.setAttribute('data-placa', item.PLACA);
+        card.setAttribute('data-dias', item['DIAS EM REPARO']);
+        card.innerHTML = `<span class="placa"><strong>Placa:</strong> ${item.PLACA}</span><br>
+                          <span><strong>Dias:</strong> ${item['DIAS EM REPARO']}</span><br>
+                          <span><strong>Empresa:</strong> ${item['EMPRESA RESP']}</span>`;
+        document.getElementById(columnId).appendChild(card);
+        card.addEventListener('click', () => {
+            createPopup(item);
+        });
+        card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', item.PLACA);
+            setTimeout(() => card.classList.add('dragging'), 0);
+        });
+        card.addEventListener('dragend', () => {
+            card.classList.remove('dragging');
+        });
+    }
+    function createPopup(item) {
+        const existingPopup = document.getElementById(`popup-${item.PLACA}`);
+        if (existingPopup) {
+            existingPopup.style.display = 'block';
+            return;
+        }
+        const cardElement = document.querySelector(`.card[data-placa="${item.PLACA}"]`);
+        const currentColumnId = cardElement?.closest('.column')?.id;
+        const savedObs = (savedState[currentColumnId]?.find(card => card.placa === item.PLACA)?.obs) || '';
+        const popup = document.createElement('div');
+        popup.className = 'popup';
+        popup.id = `popup-${item.PLACA}`;
+        const header = document.createElement('div');
+        header.className = 'popup-header';
+        header.innerHTML = `<h3>${item.PLACA}</h3>
+                            <div class="popup-controls">
+                                <span onclick="minimizePopup('${item.PLACA}')">_</span>
+                                <span onclick="closePopup('${item.PLACA}')">X</span>
+                            </div>`;
+        const content = document.createElement('div');
+        content.className = 'popup-content';
+        content.innerHTML = `<p><strong>Dias em reparo:</strong> ${item['DIAS EM REPARO']}</p>
+                             <p><strong>Empresa responsável:</strong> ${item['EMPRESA RESP']}</p>
+                             <p><strong>Status:</strong> ${item.STATUS || 'N/A'}</p>
+                             <h4>Anotações:</h4>
+                             <textarea id="obs-${item.PLACA}" placeholder="Adicione suas anotações aqui...">${savedObs}</textarea>`;
+        popup.appendChild(header);
+        popup.appendChild(content);
+        document.body.appendChild(popup);
+        makeDraggable(popup);
+        popup.style.display = 'block';
+        document.getElementById(`obs-${item.PLACA}`).addEventListener('blur', saveState);
+    }
+    function minimizePopup(placa) {
+        const popup = document.getElementById(`popup-${placa}`);
+        popup.style.display = 'none';
+        const bar = document.createElement('div');
+        bar.className = 'minimized-bar';
+        bar.textContent = placa;
+        bar.onclick = () => {
+            popup.style.display = 'block';
+            bar.remove();
+        };
+        document.getElementById('minimizedContainer').appendChild(bar);
+        saveState();
+    }
+    function closePopup(placa) {
+        const obsTextarea = document.getElementById(`obs-${placa}`);
+        if (obsTextarea) {
+            const cardElement = document.querySelector(`.card[data-placa="${placa}"]`);
+            if (cardElement) {
+                const currentColumnId = cardElement.closest('.column').id;
+                if (!savedState[currentColumnId]) {
+                    savedState[currentColumnId] = [];
+                }
+                const existingCardIndex = savedState[currentColumnId].findIndex(c => c.placa === placa);
+                if (existingCardIndex !== -1) {
+                    savedState[currentColumnId][existingCardIndex].obs = obsTextarea.value;
+                } else {
+                    savedState[currentColumnId].push({ placa: placa, obs: obsTextarea.value });
+                }
+            }
+        }
+        localStorage.setItem(savedStateKey, JSON.stringify(savedState));
+        document.getElementById(`popup-${placa}`).remove();
+    }
+    function makeDraggable(el) {
+        const header = el.querySelector('.popup-header');
+        let offsetX = 0, offsetY = 0, isDragging = false;
+        header.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            offsetX = e.clientX - el.offsetLeft;
+            offsetY = e.clientY - el.offsetTop;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+        function onMouseMove(e) {
+            if (isDragging) {
+                el.style.left = `${e.clientX - offsetX}px`;
+                el.style.top = `${e.clientY - offsetY}px`;
+            }
+        }
+        function onMouseUp() {
+            isDragging = false;
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        }
+    }
+    function allowDrop(event) {
+        event.preventDefault();
+    }
+    function drop(event) {
+        event.preventDefault();
+        const placa = event.dataTransfer.getData('text/plain');
+        const draggedCard = document.querySelector(`.card[data-placa="${placa}"]`);
+        const targetColumn = event.target.closest('.column');
+        if (targetColumn) {
+            targetColumn.appendChild(draggedCard);
+            sortCardsInColumns();
+        }
+        saveState();
+    }
+    function sortCardsInColumns() {
+        document.querySelectorAll('.column').forEach(column => {
+            const cards = Array.from(column.querySelectorAll('.card'));
+            cards.sort((a, b) => {
+                return parseInt(b.dataset.dias) - parseInt(a.dataset.dias);
+            });
+            cards.forEach(card => column.appendChild(card));
+        });
+    }
+    function searchCards() {
+        const query = document.getElementById('searchInput').value.toUpperCase();
+        document.querySelectorAll('.card').forEach(card => card.style.display = 'none');
+        if (query === '') {
+            document.querySelectorAll('.card').forEach(card => card.style.display = 'block');
+            return;
+        }
+        document.querySelectorAll('.card').forEach(card => {
+            const cardText = card.textContent.toUpperCase();
+            if (cardText.includes(query)) {
+                card.style.display = 'block';
+            }
+        });
+    }
+    window.onbeforeunload = function() {
+        return 'Tem certeza que deseja sair?';
+    };
+</script>
 </body>
 </html>
