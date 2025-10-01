@@ -1,170 +1,557 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Carinho?</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #ffe6f0;
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
+<meta charset="utf-8"/>
+<title>Kanban Veículos</title>
+<style>
+    :root {
+        --background-color: #f4f4f4;
+        --header-bg-color: #ffffff;
+        --text-color: #333333;
+        --card-bg-color: #ffffff;
+        --card-border-color: #e0e0e0;
+        --column-bg-color: #e9e9e9;
+        --accent-color: #55a828;
+        --button-bg-color: #55a828;
+        --button-hover-bg-color: #448a21;
+    }
+    body.dark-theme {
+        --background-color: #222222;
+        --header-bg-color: #111111;
+        --text-color: #e0e0e0;
+        --card-bg-color: #333333;
+        --card-border-color: #444444;
+        --column-bg-color: #2a2a2a;
+        --accent-color: #55a828;
+        --button-bg-color: #55a828;
+        --button-hover-bg-color: #448a21;
+    }
+    body {
+        font-family: Arial, sans-serif;
+        background-color: var(--background-color);
+        margin: 0;
+        padding: 0;
+        color: var(--text-color);
+        transition: background-color 0.3s, color 0.3s;
+        /* CORREÇÕES DEFENSIVAS DE LAYOUT */
+        min-height: 100vh;
+        z-index: 1; 
+        position: relative;
+        background-image: none !important; /* Tenta anular fundos externos */
+    }
+    header {
+        background-color: var(--header-bg-color);
+        color: var(--text-color);
+        padding: 10px 20px;
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        display: flex !important; /* Força Flexbox no header */
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap; 
+    }
+    header h1 {
+        margin: 0;
+        font-size: 24px;
+    }
+    header img {
+        height: 30px;
+        margin-right: 15px;
+    }
+    #header-controls {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 5px; 
+    }
+    #search-and-user { /* Novo container para melhor alinhamento do cabeçalho */
+        display: flex; 
+        align-items: center; 
+        gap: 15px; 
+        flex-wrap: wrap;
+        margin-right: 15px;
     }
-
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      position: relative;
+    #search-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    #searchInput {
+        padding: 12px;
+        font-size: 16px;
+        border: 1px solid var(--card-border-color);
+        border-radius: 5px;
+        width: 300px;
+        background-color: var(--card-bg-color);
+        color: var(--text-color);
+    }
+    #themeToggle, #logoutButton {
+        padding: 12px;
+        font-size: 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    #themeToggle {
+        background: none;
+        font-size: 24px;
+        color: var(--text-color);
+    }
+    #themeToggle:hover {
+        color: var(--accent-color);
+    }
+    #logoutButton {
+        background-color: var(--button-bg-color);
+        color: white;
+    }
+    #logoutButton:hover {
+        background-color: var(--button-hover-bg-color);
+    }
+    #kanban {
+        display: flex !important; /* Força Flexbox nas colunas */
+        justify-content: space-around;
+        flex-wrap: wrap; 
+        padding: 20px;
+        z-index: 2;
+        position: relative;
+    }
+    .column {
+        background-color: var(--column-bg-color);
+        border-radius: 8px;
+        padding: 15px;
+        width: 18%;
+        margin: 10px;
+        min-height: 200px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s;
+        min-width: 250px; 
+        flex-grow: 1;
+    }
+    .column h2 {
+        text-align: center;
+        color: var(--text-color);
+        margin-top: 0;
+        border-bottom: 2px solid var(--accent-color);
+        padding-bottom: 10px;
+    }
+    .card {
+        background-color: var(--card-bg-color);
+        border: 1px solid var(--card-border-color);
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px 0;
+        cursor: pointer;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s;
+    }
+    .card.dragging {
+        opacity: 0.5;
+    }
+    .popup {
+        position: fixed;
+        background-color: var(--card-bg-color);
+        border: 2px solid var(--card-border-color);
+        border-radius: 10px;
+        padding: 15px;
+        width: 350px;
+        z-index: 1000;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.3s ease-in-out;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: var(--text-color);
+    }
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: move;
+        background-color: var(--header-bg-color);
+        color: var(--text-color);
+        padding: 8px 15px;
+        margin: -15px -15px 15px -15px;
+        border-radius: 8px 8px 0 0;
+    }
+    .popup-header h3 {
+        margin: 0;
+    }
+    .popup-controls span {
+        margin-left: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 1.2em;
+    }
+    .popup textarea, .popup input[type="date"] {
+        width: calc(100% - 22px);
+        margin-top: 10px;
+        padding: 10px;
+        font-size: 1em;
+        border: 1px solid var(--card-border-color);
+        border-radius: 5px;
+        background-color: var(--column-bg-color);
+        color: var(--text-color);
+    }
+    .minimized-bar {
+        background-color: var(--column-bg-color);
+        border: 1px solid var(--card-border-color);
+        border-radius: 5px;
+        padding: 5px 10px;
+        cursor: pointer;
+        z-index: 1001;
+        margin-right: 5px;
+        display: inline-block;
+        color: var(--text-color);
+    }
+    #minimizedContainer {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        z-index: 1001;
+    }
+    .card.previsao-vermelha {
+        border-left: 5px solid #d9534f;
+    }
+    .card.previsao-amarela {
+        border-left: 5px solid #f0ad4e;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.9) translate(-50%, -50%); }
+        to { opacity: 1; transform: scale(1) translate(-50%, -50%); }
+    }
+    @media (max-width: 900px) {
+        #header-controls {
+            flex-grow: 1;
+            justify-content: space-around;
+        }
+        #searchInput {
+            width: 100%;
+        }
     }
-
-    h1 {
-      color: #e60073;
-      font-size: 2.5rem;
-      margin-bottom: 40px;
-    }
-
-    .botoes {
-      display: flex;
-      gap: 20px;
-      position: relative;
-    }
-
-    button {
-      padding: 15px 30px;
-      font-size: 1.2rem;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: 0.2s;
-    }
-
-    #sim {
-      background-color: #ff4da6;
-      color: white;
-    }
-
-    #nao {
-      background-color: #ccc;
-      color: black;
-      position: absolute;
-      left: 0;
-      top: 0;
-    }
-
-    .overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-      flex-direction: column;
-    }
-
-    .mensagem {
-      color: white;
-      font-size: 2rem;
-      margin-bottom: 20px;
-    }
-
-    .coraçao {
-      position: absolute;
-      color: red;
-      font-size: 2rem;
-      animation: subir 2s linear forwards;
-    }
-
-    @keyframes subir {
-      0% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(-200px);
-      }
-    }
-  </style>
+</style>
 </head>
-<body>
-  <div class="container">
-    <h1>Você vai me dar carinho?</h1>
-    <div class="botoes">
-      <button id="sim">Sim</button>
-      <button id="nao">Não</button>
-    </div>
-  </div>
+<body class="dark-theme"> 
+    <header>
+        <div style="display: flex; align-items: center;">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7d/Localiza_logo_2022.svg/2560px-Localiza_logo_2022.svg.png" alt="Localiza Logo">
+            <h1>Kanban Veículos</h1>
+        </div>
+        <div id="header-controls">
+            <div id="search-and-user">
+                <span id="userNameDisplay" style="font-weight: bold; color: var(--text-color);"></span>
+                <div id="search-container">
+                    <input id="searchInput" onkeyup="searchCards()" placeholder="Buscar por placa, fornecedor ou dias..." type="text"/>
+                </div>
+            </div>
+            <button id="themeToggle">🌙</button>
+            <button id="logoutButton">Sair</button>
+        </div>
+    </header>
+    <div id="kanban">
+        <div class="column" id="dias90" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>90 Dias</h2></div>
+        <div class="column" id="dias50" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>50 Dias</h2></div>
+        <div class="column" id="aguardando" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>Aguardando</h2></div>
+        <div class="column" id="semRetorno" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>Sem Retorno</h2></div>
+        <div class="column" id="tenhoResposta" ondragover="allowDrop(event)" ondrop="drop(event)"><h2>Tenho Resposta</h2></div>
+    </div>
+    <div id="minimizedContainer"></div>
 
-  <div class="overlay" id="overlay">
-    <div class="mensagem">Então me dá carinho agora</div>
-  </div>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.0/+esm';
 
-  <script>
-    const naoBtn = document.getElementById('nao');
-    const simBtn = document.getElementById('sim');
-    const overlay = document.getElementById('overlay');
+        // Substitua com a URL e a chave da sua conta Supabase
+        const supabaseUrl = 'https://texuqvfxczllprfuclff.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRleHVxdmZ4Y3psbHByZnVjbGZmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2Mjk0NDcsImV4cCI6MjA3NDIwNTQ0N30.1EAJ27WBf7O2uWD1ahg5JK1WMt2aB5qITR-CBAlrlaY';
+        const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Inicializa o botão "Não" no lado direito
-    function inicializarBotaoNao() {
-      naoBtn.style.left = "100px";
-      naoBtn.style.top = "0px";
-    }
+        let cardsData = [];
 
-    inicializarBotaoNao();
+        const columnMap = {
+            'dias90': '90 Dias',
+            'dias50': '50 Dias',
+            'aguardando': 'Aguardando',
+            'semRetorno': 'Sem Retorno',
+            'tenhoResposta': 'Tenho Resposta'
+        };
 
-    document.addEventListener('mousemove', (e) => {
-      const mouseX = e.clientX;
-      const mouseY = e.clientY;
-      const rect = naoBtn.getBoundingClientRect();
-      const btnX = rect.left + rect.width / 2;
-      const btnY = rect.top + rect.height / 2;
+        const userName = localStorage.getItem('user_name') || 'Willian';
+        document.getElementById('userNameDisplay').textContent = `Bem-vindo ${userName}`;
+        document.getElementById('logoutButton').addEventListener('click', () => {
+            localStorage.removeItem('user_name');
+        });
 
-      const distancia = Math.hypot(mouseX - btnX, mouseY - btnY);
+        const themeToggle = document.getElementById('themeToggle');
+        themeToggle.addEventListener('click', () => {
+            const newTheme = document.body.className === 'dark-theme' ? 'light-theme' : 'dark-theme';
+            document.body.className = newTheme;
+            themeToggle.textContent = newTheme === 'dark-theme' ? '🌙' : '☀️';
+            localStorage.setItem('kanbanTheme', newTheme);
+        });
 
-      if (distancia < 100) {
-        let newX = btnX + (Math.random() - 0.5) * 300;
-        let newY = btnY + (Math.random() - 0.5) * 300;
+        const savedTheme = localStorage.getItem('kanbanTheme');
+        if (savedTheme) {
+            document.body.className = savedTheme;
+            themeToggle.textContent = savedTheme === 'dark-theme' ? '🌙' : '☀️';
+        }
 
-        // Garante que o botão fique dentro da tela
-        const maxX = window.innerWidth - rect.width;
-        const maxY = window.innerHeight - rect.height;
+        // --- Funções de Drag & Drop ---
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev) { ev.dataTransfer.setData("text/plain", ev.target.dataset.placa); }
+        function drop(ev) {
+            ev.preventDefault();
+            const placa = ev.dataTransfer.getData("text/plain");
+            const draggedCard = document.querySelector(`.card[data-placa="${placa}"]`);
+            const targetColumn = ev.target.closest('.column');
+            if (!draggedCard || !targetColumn) return;
+            
+            const targetColumnId = targetColumn.id;
+            targetColumn.appendChild(draggedCard); 
+            updateCardState(placa, targetColumnId); 
+        }
 
-        newX = Math.max(0, Math.min(maxX, newX));
-        newY = Math.max(0, Math.min(maxY, newY));
+        // --- Funções de Manipulação de Dados no Supabase ---
+        async function updateCardState(placa, columnId, anotacao = null, data_previsao = null) {
+            const existingCard = cardsData.find(c => c.PLACA === placa);
+            let updateObject = { etapa_kanban: columnId };
+            let success = false;
 
-        naoBtn.style.left = newX + 'px';
-        naoBtn.style.top = newY + 'px';
-      }
-    });
+            if (anotacao !== null) updateObject.anotacao = anotacao;
+            if (data_previsao !== null) updateObject.data_previsao = data_previsao;
 
-    simBtn.addEventListener('click', () => {
-      overlay.style.display = 'flex';
-      gerarCoracoes();
-    });
+            const { data, error } = await supabase
+                .from('kanban_veiculos')
+                .update(updateObject)
+                .eq('PLACA', placa)
+                .select();
+            
+            if (error) {
+                console.error("Erro ao atualizar o estado do cartão:", error);
+                if (error.code === 'PGRST116') {
+                    const { data: newData, error: newError } = await supabase
+                        .from('kanban_veiculos')
+                        .insert({ PLACA: placa, etapa_kanban: columnId, anotacao, data_previsao })
+                        .select();
+                    if (newError) console.error("Erro ao inserir novo cartão:", newError);
+                    else {
+                        cardsData = [...cardsData, ...newData];
+                        success = true;
+                    }
+                }
+            } else {
+                success = true;
+            } 
+            
+            if (success) {
+                // Atualiza o cardsData localmente
+                const index = cardsData.findIndex(c => c.PLACA === placa);
+                if (index !== -1) {
+                    cardsData[index] = { ...cardsData[index], ...updateObject };
+                    
+                    // Se a operação veio do pop-up, re-renderiza o cartão individual.
+                    if (anotacao !== null || data_previsao !== null) {
+                        const cardElement = document.querySelector(`.card[data-placa="${placa}"]`);
+                        if (cardElement && cardElement.parentElement) {
+                            const newCardElement = createCardElement(cardsData[index]);
+                            cardElement.parentElement.replaceChild(newCardElement, cardElement);
+                        }
+                    }
+                }
+            }
+        }
 
-    function gerarCoracoes() {
-      for (let i = 0; i < 20; i++) {
-        const cora = document.createElement('div');
-        cora.classList.add('coraçao');
-        cora.innerText = '❤';
-        cora.style.left = Math.random() * window.innerWidth + 'px';
-        cora.style.top = window.innerHeight + 'px';
-        overlay.appendChild(cora);
+        async function savePopup(placa, btn) {
+            const popup = btn.closest('.popup');
+            const anotacao = popup.querySelector('#popupText').value;
+            const data_previsao = popup.querySelector('#popupPrevisao').value;
+            
+            const cardElement = document.querySelector(`.card[data-placa="${placa}"]`);
+            const currentColumnId = cardElement ? cardElement.closest('.column').id : null;
+            
+            await updateCardState(placa, currentColumnId, anotacao, data_previsao);
+            popup.remove();
+        }
+        
+        // --- Funções de Renderização e Lógica do Kanban ---
+        function createCardElement(item) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.draggable = true;
+            card.dataset.placa = item.PLACA;
+            card.dataset.dias = item['TEMPO PARADO'];
+            card.addEventListener('dragstart', drag);
+            
+            card.classList.remove('previsao-vermelha', 'previsao-amarela');
 
-        setTimeout(() => {
-          cora.remove();
-        }, 2000);
-      }
-    }
-  </script>
+            if (item.data_previsao) {
+                const previsao = new Date(item.data_previsao);
+                const hoje = new Date();
+                previsao.setHours(0, 0, 0, 0);
+                hoje.setHours(0, 0, 0, 0);
+                
+                const diff = (previsao - hoje) / (1000 * 60 * 60 * 24);
+                if (diff < 0) card.classList.add('previsao-vermelha');
+                else if (diff <= 10) card.classList.add('previsao-amarela');
+            }
+
+            card.innerHTML = `<strong>Placa:</strong> ${item.PLACA}<br>
+                              <strong>Tempo Parado:</strong> ${item['TEMPO PARADO']}<br>
+                              <strong>Fornecedor:</strong> ${item.FORNECEDOR}<br>
+                              <strong>Status:</strong> ${item.STATUS || ''}`;
+
+            card.ondblclick = () => showPopup(item);
+            return card;
+        }
+
+        function showPopup(cardData) {
+            const existingPopup = document.getElementById(`popup-${cardData.PLACA}`);
+            if (existingPopup) {
+                existingPopup.remove();
+            }
+            
+            const popup = document.createElement('div');
+            popup.classList.add('popup');
+            popup.id = `popup-${cardData.PLACA}`;
+            
+            const header = document.createElement('div');
+            header.className = 'popup-header';
+            header.innerHTML = `
+                <h3>${cardData.PLACA}</h3>
+                <div class="popup-controls">
+                    <span onclick="closePopup(this)">✖️</span>
+                    <span onclick="minimizePopup(this)">➖</span>
+                </div>
+            `;
+
+            const content = document.createElement('div');
+            content.className = 'popup-content';
+            content.innerHTML = `
+                <p><strong>Tempo Parado:</strong> ${cardData['TEMPO PARADO'] || 'N/A'}</p>
+                <p><strong>Tempo Etapa:</strong> ${cardData['TEMPO ETAPA'] || 'N/A'}</p>
+                <p><strong>Fornecedor:</strong> ${cardData.FORNECEDOR || 'N/A'}</p>
+                <p><strong>Modelo:</strong> ${cardData.MODELO || 'N/A'}</p>
+                <p><strong>KM:</strong> ${cardData.KM || 'N/A'}</p>
+                <p><strong>SS:</strong> ${cardData.SS || 'N/A'}</p>
+                <p><strong>Data Entrada SS:</strong> ${cardData['DATA_ENTRADA_SS'] || 'N/A'}</p>
+                <p><strong>Cidade:</strong> ${cardData.CIDADE || 'N/A'}</p>
+                <p><strong>Observação Monitoria:</strong> ${cardData['MON OBS'] || 'N/A'}</p>
+                <p><strong>Previsão de Serviço:</strong> ${cardData['DATA_PREV_SERVICO'] || 'N/A'}</p>
+
+                <h4>Anotações:</h4>
+                <textarea id="popupText">${cardData.anotacao || ''}</textarea>
+                <h4>Previsão:</h4>
+                <input type="date" id="popupPrevisao" value="${cardData.data_previsao || ''}" />
+                <button style="margin-top:10px;" onclick="savePopup('${cardData.PLACA}', this)">Salvar</button>
+            `;
+            
+            popup.appendChild(header);
+            popup.appendChild(content);
+            document.body.appendChild(popup);
+        }
+        
+        function determineInitialColumn(item) {
+            const tempoParado = parseInt(item['TEMPO PARADO']);
+            if (tempoParado >= 90) {
+                return 'dias90';
+            } else if (tempoParado >= 50) {
+                return 'dias50';
+            } else if (item.STATUS && item.STATUS.toLowerCase().includes('tenho resposta')) {
+                return 'tenhoResposta';
+            } else if (item.STATUS && item.STATUS.toLowerCase().includes('sem retorno')) {
+                return 'semRetorno';
+            }
+            return 'aguardando';
+        }
+
+        async function loadKanban() {
+            const { data, error } = await supabase.from('kanban_veiculos').select('*');
+            if (error) {
+                console.error("Erro ao carregar dados:", error);
+                return;
+            }
+            cardsData = data;
+            
+            document.querySelectorAll('.column').forEach(c => {
+                const title = c.querySelector('h2').textContent;
+                c.innerHTML = `<h2>${title}</h2>`;
+            });
+            
+            cardsData.forEach(card => {
+                const targetColumnId = card.etapa_kanban || determineInitialColumn(card);
+                const cardDiv = createCardElement(card);
+                const columnEl = document.getElementById(targetColumnId);
+                if (columnEl) {
+                    columnEl.appendChild(cardDiv);
+                }
+            });
+        }
+        
+        // --- Funções de Busca ---
+        function searchCards() {
+            const term = document.getElementById('searchInput').value.toLowerCase().trim();
+            const allCards = document.querySelectorAll('.card');
+
+            allCards.forEach(card => {
+                const placa = card.dataset.placa;
+                const cardData = cardsData.find(c => c.PLACA === placa);
+                let isMatch = false;
+
+                if (!cardData) {
+                    card.style.display = 'none';
+                    return;
+                }
+                
+                // 1. Tenta buscar por número (Dias Parados Exato)
+                const numberTerm = parseInt(term, 10);
+                if (!isNaN(numberTerm)) {
+                    const tempoParado = parseInt(cardData['TEMPO PARADO']);
+                    if (!isNaN(tempoParado) && tempoParado === numberTerm) {
+                        isMatch = true;
+                    }
+                }
+
+                // 2. Busca por texto (Placa, Fornecedor, Anotação)
+                if (!isMatch) {
+                    const textContent = (cardData.PLACA + ' ' + (cardData.FORNECEDOR || '') + ' ' + (cardData.anotacao || '')).toLowerCase();
+                    if (textContent.includes(term)) {
+                        isMatch = true;
+                    }
+                }
+
+                // Atualiza a exibição
+                if (isMatch) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+
+        // --- Funções Auxiliares (Popups e Minimização) ---
+        function closePopup(el) { el.closest('.popup').remove(); }
+        function minimizePopup(el) {
+            const popup = el.closest('.popup');
+            const minBar = document.createElement('div');
+            minBar.className = 'minimized-bar';
+            minBar.textContent = popup.querySelector('.popup-header h3').textContent;
+            minBar.onclick = () => { popup.style.display = 'block'; minBar.remove(); };
+            popup.style.display = 'none';
+            document.getElementById('minimizedContainer').appendChild(minBar);
+        }
+
+        // Inicializa o Kanban ao carregar a página
+        loadKanban();
+
+        // Expõe funções ao escopo global para o HTML
+        window.allowDrop = allowDrop;
+        window.drop = drop;
+        window.showPopup = showPopup;
+        window.closePopup = closePopup;
+        window.minimizePopup = minimizePopup;
+        window.savePopup = savePopup;
+        window.searchCards = searchCards;
+    </script>
 </body>
 </html>
